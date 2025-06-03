@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Bot, User } from 'lucide-react';
 
@@ -22,6 +21,14 @@ const ChatBot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Get collection name from URL
+  const getCollectionName = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const collectionName = urlParams.get('collection_name');
+    // Remove quotes if present and return the collection name
+    return collectionName ? collectionName.replace(/['"]/g, '') : '';
+  };
 
   const formatTextWithBold = (text: string) => {
     const parts = text.split('**');
@@ -114,7 +121,7 @@ const ChatBot = () => {
         },
         body: JSON.stringify({
           question: inputValue,
-          collection_name: 'baapcompany'
+          collection_name: getCollectionName()
         })
       });
 
@@ -182,9 +189,8 @@ const ChatBot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        // <div className="fixed bottom-6 right-6 w-[420px] h-[580px] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 flex flex-col overflow-hidden">
-        <div className="fixed bottom-6 right-6 w-[420px] h-[580px] bg-transparent rounded-2xl shadow-2xl border border-gray-100 z-50 flex flex-col overflow-hidden backdrop-blur-md">  
-        {/* Header */}
+        <div className="fixed bottom-6 right-6 w-[420px] h-[580px] bg-transparent rounded-2xl shadow-2xl border border-gray-100 z-50 flex flex-col overflow-hidden backdrop-blur-md">
+          {/* Header */}
           <div className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white p-5 flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -201,7 +207,6 @@ const ChatBot = () => {
           </div>
 
           {/* Messages */}
-          {/* <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-orange-50 to-pink-50"> */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-transparent">
             {messages.map((message) => (
               <div
