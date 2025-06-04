@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Bot, User } from 'lucide-react';
+import { MessageCircle, Send, X, Bot, User, Mail, Phone, ExternalLink } from 'lucide-react';
 
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  buttons?: boolean;
+  buttonType?: string[];
+  buttonData?: string[];
 }
 
 const ChatBot = () => {
@@ -90,6 +93,54 @@ const ChatBot = () => {
     });
   };
 
+  const handleButtonClick = (buttonType: string, buttonData: string) => {
+    switch (buttonType) {
+      case 'email':
+        window.location.href = `mailto:${buttonData}`;
+        break;
+      case 'phone':
+        window.location.href = `tel:${buttonData}`;
+        break;
+      case 'url':
+      case 'link':
+        window.open(buttonData, '_blank');
+        break;
+      default:
+        // For other types, just copy to clipboard
+        navigator.clipboard.writeText(buttonData).then(() => {
+          console.log('Copied to clipboard:', buttonData);
+        });
+    }
+  };
+
+  const getButtonIcon = (buttonType: string) => {
+    switch (buttonType) {
+      case 'email':
+        return <Mail className="w-4 h-4" />;
+      case 'phone':
+        return <Phone className="w-4 h-4" />;
+      case 'url':
+      case 'link':
+        return <ExternalLink className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getButtonLabel = (buttonType: string, buttonData: string) => {
+    switch (buttonType) {
+      case 'email':
+        return `Send Email`;
+      case 'phone':
+        return `Call ${buttonData}`;
+      case 'url':
+      case 'link':
+        return `Visit Link`;
+      default:
+        return buttonData;
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -113,7 +164,7 @@ const ChatBot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/ask-question', {
+      const response = await fetch('http://127.0.0.1:8000/api/ask-question', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,28 +184,15 @@ const ChatBot = () => {
 
       const botMessage: Message = {
         id: messages.length + 2,
-        text: data.answer,
+        text: data.response, // Changed from data.answer to data.response
         isUser: false,
-        timestamp: new Date()
+        timestamp: new Date(),
+        buttons: data.buttons,
+        buttonType: data.button_type,
+        buttonData: data.button_data
       };
 
       setMessages(prev => [...prev, botMessage]);
-
-      // Log debug info if available
-      if (data.debug_info?.message) {
-        console.log('Chatbot Debug Info:', data.debug_info.message);
-      }
-
-      // Show context warning if needed
-      if (data.context_used === false) {
-        const warningMessage: Message = {
-          id: messages.length + 3,
-          text: "⚠️ This answer may not use site-specific knowledge.",
-          isUser: false,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, warningMessage]);
-      }
 
     } catch (error) {
       console.error('Chatbot API Error:', error);
@@ -209,44 +247,59 @@ const ChatBot = () => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-transparent">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex items-start space-x-3 ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}
-              >
-                {/* Avatar */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.isUser 
-                    ? 'bg-gradient-to-br from-teal-400 to-cyan-600' 
-                    : 'bg-gradient-to-br from-orange-500 to-pink-600'
-                }`}>
-                  {message.isUser ? (
-                    <User className="w-4 h-4 text-white" />
-                  ) : (
-                    <Bot className="w-4 h-4 text-white" />
-                  )}
-                </div>
-
-                <div className={`flex flex-col max-w-[85%] ${message.isUser ? 'items-end' : 'items-start'}`}>
-                  {/* Sender Label */}
-                  <span className={`text-xs font-medium mb-1 ${
-                    message.isUser ? 'text-teal-600' : 'text-orange-600'
+              <div key={message.id}>
+                <div className={`flex items-start space-x-3 ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.isUser 
+                      ? 'bg-gradient-to-br from-teal-400 to-cyan-600' 
+                      : 'bg-gradient-to-br from-orange-500 to-pink-600'
                   }`}>
-                    {message.isUser ? 'You' : 'AI'}
-                  </span>
+                    {message.isUser ? (
+                      <User className="w-4 h-4 text-white" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
+                  </div>
 
-                  {/* Message Bubble */}
-                  <div
-                    className={`px-4 py-3 rounded-2xl shadow-sm border ${
-                      message.isUser
-                        ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white border-teal-200'
-                        : 'bg-white text-gray-800 border-gray-200 shadow-md'
-                    }`}
-                  >
-                    <div className="text-sm leading-relaxed font-medium">
-                      {message.isUser ? message.text : formatMessage(message.text)}
+                  <div className={`flex flex-col max-w-[85%] ${message.isUser ? 'items-end' : 'items-start'}`}>
+                    {/* Sender Label */}
+                    <span className={`text-xs font-medium mb-1 ${
+                      message.isUser ? 'text-teal-600' : 'text-orange-600'
+                    }`}>
+                      {message.isUser ? 'You' : 'AI'}
+                    </span>
+
+                    {/* Message Bubble */}
+                    <div
+                      className={`px-4 py-3 rounded-2xl shadow-sm border ${
+                        message.isUser
+                          ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white border-teal-200'
+                          : 'bg-white text-gray-800 border-gray-200 shadow-md'
+                      }`}
+                    >
+                      <div className="text-sm leading-relaxed font-medium">
+                        {message.isUser ? message.text : formatMessage(message.text)}
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Action Buttons */}
+                {!message.isUser && message.buttons && message.buttonType && message.buttonData && (
+                  <div className="mt-3 ml-11 flex flex-wrap gap-2">
+                    {message.buttonType.map((type, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleButtonClick(type, message.buttonData![index])}
+                        className="inline-flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-pink-600 text-white text-xs font-medium rounded-lg hover:from-orange-600 hover:to-pink-700 transition-all shadow-sm hover:shadow-md transform hover:scale-105"
+                      >
+                        {getButtonIcon(type)}
+                        <span>{getButtonLabel(type, message.buttonData![index])}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             
